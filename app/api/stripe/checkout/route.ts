@@ -4,7 +4,9 @@ import { getSession } from "@/lib/session";
 import db from "@/lib/db";
 import { PLANS } from "@/lib/plans";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!);
+}
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -25,13 +27,14 @@ export async function POST(request: NextRequest) {
   // Create or retrieve Stripe customer
   let customerId = store.stripeCustomerId;
   if (!customerId) {
-    const customer = await stripe.customers.create({
+    const customer = await getStripe().customers.create({
       metadata: { storeId: store.id, siteId: store.siteId },
     });
     customerId = customer.id;
     await db.store.update({ where: { id: store.id }, data: { stripeCustomerId: customerId } });
   }
 
+  const stripe = getStripe();
   const checkoutSession = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
